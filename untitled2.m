@@ -69,3 +69,57 @@ samples = double(bern_vb.variational_sample);
 
 
 %% 
+%%
+colnames = string(fit.column_names);
+draws = double(fit.draws());
+figure;
+plot(draws(:, :,  find(colnames == 'beta[1]')))
+legend({'Chain #1', 'Chain #2','Chain #3','Chain #4',})
+
+A = draws(:, :,  find(colnames == 'beta[1]'));
+B= draws(:, :,  find(colnames == 'beta[2]'));
+
+figure; plot(A(:), B(:), '+')
+
+%%
+
+%%
+idx_voxel  = 1;                                  % voxel whose residuals you plotted
+
+beta = double(fit.stan_variable('beta_orig'));
+res = data(1,:)' - model.X * mean(beta, 1)';
+
+% empirical ACF from the residuals (as before)
+[acf, lags] = acf_base(res, 100);
+
+figure; plot(lags, acf)
+
+lag_s = lags(:)';
+
+y_noise = double(fit.stan_variable('y_noise'));
+y_noise = squeeze(y_noise(:, idx_voxel, :));
+
+acf_sim = acf_rows(y_noise, 100);
+
+acf_med = median(acf_sim, 1);
+acf_ci  = prctile(acf_sim, [2.5 97.5], 1);
+
+figure; hold on
+fill([lag_s fliplr(lag_s)], [acf_ci(1,:) fliplr(acf_ci(2,:))], ...
+    [1 0.8 0.8], 'EdgeColor', 'none', 'FaceAlpha', 0.6)
+plot(lag_s, acf_med, 'r', 'LineWidth', 2)
+stem(lag_s, acf, 'filled', 'Color', [0 0.45 0.74], 'MarkerSize', 3)
+yline(1.96/sqrt(numel(res)), 'k--'); yline(-1.96/sqrt(numel(res)), 'k--');
+xlabel('lag (s)'); ylabel('autocorrelation')
+legend('AR(1) simulated, 95% interval', 'AR(1) simulated, median', 'residual ACF', ...
+    'Location', 'northeast')
+
+%%
+
+figure; 
+subplot(2,1,1)
+plot(model.time, y_noise(1:10, :));
+title('Simulated AR(1)'); xlabel('Time(s)')
+subplot(2,1,2)
+plot(model.time, res);
+title('Residual'); xlabel('Time(s)')
