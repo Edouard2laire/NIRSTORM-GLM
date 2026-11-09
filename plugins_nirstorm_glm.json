@@ -1,0 +1,12 @@
+{
+  "Name": "nirstorm-glm",
+  "Version": "latest",
+  "Category": "Other",
+  "URLzip": "https://github.com/Edouard2laire/NIRSTORM-GLM/archive/refs/heads/main.zip",
+  "URLinfo": "https://github.com/Edouard2laire/NIRSTORM-GLM/",
+  "TestFile": "nst_create_model.m",
+  "LoadFolders": [
+    "*"
+  ],
+  "CompiledStatus": 0
+}
