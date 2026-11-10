@@ -36,3 +36,7 @@ title(sprintf('%d Fonctions de Base B-splines Cubiques (0 à 25s)', num_basis), 
 % Ajout d'une légende propre
 labels = arrayfun(@(x) sprintf('B_{%d}(t)', x), 1:num_basis, 'UniformOutput', false);
 legend(labels, 'Location', 'eastoutside');
+
+
+T = array2table([t_eval', B], 'VariableNames',{'time', 'pc1', 'pc2', 'pc3', 'pc4', 'pc5', 'pc6', 'pc7', 'pc8', 'pc9', 'pc10'});
+writetable(T, 'HRFbasis_spline.csv')
