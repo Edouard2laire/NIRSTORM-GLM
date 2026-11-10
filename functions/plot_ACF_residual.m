@@ -1,4 +1,4 @@
-function plot_ACF_residual(ax, model, data, fit)
+function [lags, A, residual] = plot_ACF_residual(ax, model, data, fit)
     
     maxlag = 100;
     betas = double(fit.stan_variable('beta_orig'));

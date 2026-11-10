@@ -5,12 +5,14 @@ if ~brainstorm('status')
     brainstorm server
 end
 
-
-
 %% Load data
+% sFiles = {...
+%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309_low.mat', ...
+%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309_low.mat'};
+
 sFiles = {...
-    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309_low.mat', ...
-    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309_low.mat'};
+    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309.mat', ...
+    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309.mat'};
 
 
 sDataHbO = in_bst_results(sFiles{1}, 1);
@@ -132,7 +134,7 @@ title('Prediction HbR'); xlabel('Time (s)')
 
 
 ax = subplot(2,2,4);
-plot_ACF_residual(ax, model, data(1,:), fit{1})
+[lags, A, residual] = plot_ACF_residual(ax, model, data(1,:), fit{1});
 plot_ACF_residual(ax, model, data(2,:), fit{2})
 title('Autocorellation function'); legend({'HbO',   'HbR'})
 xlabel('Time (s)')
@@ -178,3 +180,15 @@ G(1,1).axe_property('XLim',[0, 25]);
 
 figure;
 G.draw() 
+
+%% Fit using Huppert toolbox
+
+addpath(genpath('/NAS/home/edelaire/Documents/software/nirs-toolbox'));
+stats = nirs.math.ar_irls(data', model.X, 100, 4.685, 0, 0, 1 );
+
+beta = stats.beta;
+
+figure; hold on;
+plot(sHRF.time, beta(1, 1) * sHRF.pc1 +  beta(2, 1) * sHRF.pc2  + beta(3, 1) * sHRF.pc3 , 'r');
+plot(sHRF.time, beta(1, 2) * sHRF.pc1 +  beta(2, 2) * sHRF.pc2  + beta(3, 2) * sHRF.pc3 , 'b');
+yline(0, '--')
