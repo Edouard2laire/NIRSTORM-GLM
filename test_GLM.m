@@ -50,7 +50,9 @@ yline(0, '--')
 
 %% With stan
 
-pyenv("Version", '/home/edelaire/anaconda3/envs/cmdstan/bin/python', 'ExecutionMode', 'OutOfProcess')
+%pyenv("Version", '/home/edelaire/anaconda3/envs/cmdstan/bin/python', 'ExecutionMode', 'InProcess')
+pyenv(Version="/Users/edelaire1/miniconda3/envs/cmdstanpy/bin/python",  ExecutionMode="InProcess")
+
 
 [stan_model, fit] = fit_model(model, data);
 
@@ -184,11 +186,35 @@ G.draw()
 %% Fit using Huppert toolbox
 
 addpath(genpath('/NAS/home/edelaire/Documents/software/nirs-toolbox'));
-stats = nirs.math.ar_irls(data', model.X, 100, 4.685, 0, 0, 1 );
 
-beta = stats.beta;
 
-figure; hold on;
-plot(sHRF.time, beta(1, 1) * sHRF.pc1 +  beta(2, 1) * sHRF.pc2  + beta(3, 1) * sHRF.pc3 , 'r');
-plot(sHRF.time, beta(1, 2) * sHRF.pc1 +  beta(2, 2) * sHRF.pc2  + beta(3, 2) * sHRF.pc3 , 'b');
+
+
+figure; 
+hold on;
+
+stats = nirs.math.ar_irls(data(1,:)', model.X, 10, 4.685, 0, 0, 1 );
+draws = mvnrnd(stats.beta, stats.covb, 2000); 
+y = draws(:,1:3)*([sHRF.pc1 , sHRF.pc2 ,  sHRF.pc3])'; [ValMaxHbO, ImaxHbO] = max(y, [], 2);
+shadedErrorBar(sHRF.time, mean(y,1), std(y), 'lineProps', 'r-');
+
+stats = nirs.math.ar_irls(data(2,:)', model.X, 10, 4.685, 0, 0, 1 );
+draws = mvnrnd(stats.beta, stats.covb, 2000); 
+y = draws(:,1:3)*([sHRF.pc1 , sHRF.pc2 ,  sHRF.pc3])';  [ValMaxHbR, ImaxHbR] = min(y, [], 2);
+shadedErrorBar(sHRF.time, mean(y,1), std(y), 'lineProps', 'b-');
+
 yline(0, '--')
+
+clear g;
+
+G = gramm('x', [sHRF.time(ImaxHbO); sHRF.time(ImaxHbR)]',  'color', [repmat({'HbO'}, length(ImaxHbO), 1);  repmat({'HbR'}, length(ImaxHbO), 1)]);
+G.stat_density("bandwidth", 0.25, 'extra_x',true); 
+G.axe_property('XLim',[7, 9]);
+G.set_title('Time of peak (s)')
+
+figure;
+G.draw();
+
+histogram(sHRF.time(ImaxHbO));
+histogram(sHRF.time(ImaxHbR));
+

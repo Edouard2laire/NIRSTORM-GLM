@@ -3,7 +3,7 @@ function [stan_model, fit] = fit_model(model, data)
 %   Detailed explanation goes here
     
     cmdstanpy = py.importlib.import_module('cmdstanpy');
-    stan_model = cmdstanpy.CmdStanModel(pyargs('stan_file', fullfile('models','glm_model.stan'),  'cpp_options' , py.dict(pyargs('STAN_THREADS','true', 'STAN_OPENCL', 'true'))));
+    stan_model = cmdstanpy.CmdStanModel(pyargs('stan_file', fullfile('models','glm_model.stan')));
     
     fit = cell(1, size(data, 1));
     for iData = 1:size(data, 1)
