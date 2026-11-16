@@ -68,7 +68,7 @@ function model = nst_glm_concatenate(modelA, modelB)
     % --- Assemble ---
     model            = nst_glm_initialize_model(new_time);
     model.X          = [X_data, X_nuisance];
-    model.reg_names  = [data_names, namesA(isNuisanceA), namesB(isNuisanceB)];
+    model.reg_names  = [data_names, namesA(isNuisanceA), cellfun(@(x) file_unique(x, namesA(isNuisanceA)), namesB(isNuisanceB), 'UniformOutput', false)];
     model.hrf        = modelA.hrf;
     model.accept_filter = [data_filter, filtA(isNuisanceA), filtB(isNuisanceB)];
 end

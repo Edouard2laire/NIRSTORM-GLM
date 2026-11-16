@@ -14,7 +14,7 @@ function [model, sHRF] = nst_create_model(time, sEvents, sHRF)
             model.X         = [model.X X_event./max(X_event)];
 
 
-            model.reg_names{end+1} = sprintf('%s - pc%d', sEvents(iEvent).label, iEvent); 
+            model.reg_names{end+1} = sprintf('%s - pc%d', sEvents(iEvent).label, iComponnent); 
             model.accept_filter(end+1) = 3;
             model.n_roi     = model.n_roi + 1;
         end
