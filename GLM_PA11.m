@@ -34,8 +34,8 @@ eventNames = {'spikes^N2', 'spikes^N3',  'bursts^N2_F', 'bursts^N3_F'};
 %% Initialize model
 
 sHRF = nst_load_hrf_lib('HRFbasis_500Hz', 0.1);
-modelAll = [];
-dataAll = [];
+modelAll = []; models = [];
+dataAll = []; datas = {};
 for iData = 1:length(sFiles)
     
     sFile = sFiles{iData};
@@ -54,8 +54,14 @@ for iData = 1:length(sFiles)
     [model, sHRF] = nst_create_model(time, events, sHRF);
     model = nst_glm_apply_filter(model, 'FIR_bp', 0.002, 0.1, 0.002);
 
+    % save concatanated data
     modelAll = nst_glm_concatenate(modelAll, model);
     dataAll = [ data, dataAll];
+
+    % save splitted data
+    models(iData) = model;
+    datas{iData} =  data;
+
 end
 
 %% %% Fit model  and plot results ussing nirstormn fit
@@ -83,8 +89,8 @@ end
 
 addpath(genpath('/NAS/home/edelaire/Documents/software/nirs-toolbox'));
 
-stats(1) = nirs.math.ar_irls(data(1,:)', model.X, 10, 4.685, 0, 0, 1 );
-stats(2) = nirs.math.ar_irls(data(2,:)', model.X, 10, 4.685, 0, 0, 1 );
+stats(1) = nirs.math.ar_irls(dataAll(1,:)', modelAll.X, 10, 4.685, 0, 0, 1 );
+stats(2) = nirs.math.ar_irls(dataAll(2,:)', modelAll.X, 10, 4.685, 0, 0, 1 );
 
 
 draws_HbO = mvnrnd(stats(1).beta, stats(1).covb, 2000); 
@@ -92,7 +98,7 @@ draws_HbR = mvnrnd(stats(2).beta, stats(2).covb, 2000);
 
 
 for iEvent = 1:length(eventNames)
-    iReg = contains(model.reg_names, eventNames(iEvent));
+    iReg = contains(modelAll.reg_names, eventNames(iEvent));
 
     if ~any(iReg)
         continue;
@@ -109,3 +115,16 @@ for iEvent = 1:length(eventNames)
     yline(0, '--')
 end
 
+%% Fit one model per data
+
+for iData = 1:length(datas)
+
+    data = datas{iData};
+
+    stats_HbO(iData) = nirs.math.ar_irls(data(1,:)', models(iData).X, 10, 4.685, 0, 0, 1 );
+    stats_HbR(iData) = nirs.math.ar_irls(data(2,:)', models(iData).X, 10, 4.685, 0, 0, 1 );
+
+end
+
+stats_HbO_all = nst_glm_fixed_effect(stats_HbO, models);
+stats_HbR_all = nst_glm_fixed_effect(stats_HbR, models);
