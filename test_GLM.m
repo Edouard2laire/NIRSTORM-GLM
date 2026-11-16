@@ -6,13 +6,13 @@ if ~brainstorm('status')
 end
 
 %% Load data
-% sFiles = {...
-%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309_low.mat', ...
-%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309_low.mat'};
-
 sFiles = {...
-    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309.mat', ...
-    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309.mat'};
+    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309_low.mat', ...
+    'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309_low.mat'};
+
+% sFiles = {...
+%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbO_261024_1309.mat', ...
+%     'sub-01/sub-01_task-tapping_run-01_preproc/results_NIRS_wMEM___smooth=0.6_DWT_j1___2___3___4___5___6___7___8___9__10_____HbR_261024_1309.mat'};
 
 
 sDataHbO = in_bst_results(sFiles{1}, 1);
@@ -36,16 +36,18 @@ data = [ mean(sDataHbO.ImageGridAmp(sRoi.Vertices, :), 1); ...
 dt = time(2)-time(1);
 
 %% Initialize model
-[model, sHRF] = nst_create_model(time, tapping);
+
+sHRF = nst_load_hrf_lib('HRFbasis_spline', time);
+[model, sHRF] = nst_create_model(time, tapping, sHRF);
+model = nst_glm_apply_filter(model, 'FIR_bp', 0.002, 0.1, 0.002);
 
 %% %% Fit model  and plot results ussing nirstormn fit
 fitted_model = nst_glm_fit(model, data' , 'OLS_prewhitening');
-
 beta = fitted_model.B;
 
 figure; hold on;
-plot(sHRF.time, beta(1, 1) * sHRF.pc1 +  beta(2, 1) * sHRF.pc2  + beta(3, 1) * sHRF.pc3 , 'r');
-plot(sHRF.time, beta(1, 2) * sHRF.pc1 +  beta(2, 2) * sHRF.pc2  + beta(3, 2) * sHRF.pc3 , 'b');
+plot(sHRF.time, model.hrf * beta(1:sHRF.nComponnent, 1) , 'r');
+plot(sHRF.time, model.hrf * beta(1:sHRF.nComponnent, 2) , 'b');
 yline(0, '--')
 
 %% With stan
@@ -194,13 +196,13 @@ figure;
 hold on;
 
 stats = nirs.math.ar_irls(data(1,:)', model.X, 10, 4.685, 0, 0, 1 );
-draws = mvnrnd(stats.beta, stats.covb, 2000); 
-y = draws(:,1:3)*([sHRF.pc1 , sHRF.pc2 ,  sHRF.pc3])'; [ValMaxHbO, ImaxHbO] = max(y, [], 2);
+draws = mvnrnd(stats.beta, (stats.covb+stats.covb')/2, 2000); 
+y = draws(:,1:sHRF.nComponnent)*(sHRF.basis_functions)'; [ValMaxHbO, ImaxHbO] = max(y, [], 2);
 shadedErrorBar(sHRF.time, mean(y,1), std(y), 'lineProps', 'r-');
 
 stats = nirs.math.ar_irls(data(2,:)', model.X, 10, 4.685, 0, 0, 1 );
 draws = mvnrnd(stats.beta, stats.covb, 2000); 
-y = draws(:,1:3)*([sHRF.pc1 , sHRF.pc2 ,  sHRF.pc3])';  [ValMaxHbR, ImaxHbR] = min(y, [], 2);
+y = draws(:,1:sHRF.nComponnent)*(sHRF.basis_functions)'; [ValMaxHbR, ImaxHbR] = min(y, [], 2);
 shadedErrorBar(sHRF.time, mean(y,1), std(y), 'lineProps', 'b-');
 
 yline(0, '--')
@@ -215,6 +217,7 @@ G.set_title('Time of peak (s)')
 figure;
 G.draw();
 
+figure;
 histogram(sHRF.time(ImaxHbO));
 histogram(sHRF.time(ImaxHbR));
 
