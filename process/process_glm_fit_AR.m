@@ -37,10 +37,17 @@ function sProcess = GetDescription()
     sProcess.options.stim_events.Type    = 'text';
     sProcess.options.stim_events.Value   = '';
 
+    sProcess.options.label3.Comment = '<U><B>Atlas definition</B></U>:';
+    sProcess.options.label3.Type    = 'label';
+    sProcess.options.scouts.Comment = '';
+    sProcess.options.scouts.Type    = 'scout';
+    sProcess.options.scouts.Value   = {};
+    sProcess.options.scouts.InputTypes = {'results'};
+
+
     sProcess.options.out_name.Comment = 'Output Folder name';
     sProcess.options.out_name.Type='text';
     sProcess.options.out_name.Value = '';
-
 end
 
 
@@ -67,7 +74,7 @@ function OutputFiles = Run(sProcess, sInputs)
     sSubject = bst_get('Subject', sInputs(1).SubjectName);
     sCortex = in_tess_bst(sSubject.Surface(sSubject.iCortex).FileName);
 
-    atlas_name = 'User scouts'; ROI_name = 'ReconFocal';
+    atlas_name = sProcess.options.scouts.Value{1}; ROI_name = sProcess.options.scouts.Value{2};
 
     sAtlas = sCortex.Atlas(strcmp({sCortex.Atlas.Name}, atlas_name));
     sRoi = sAtlas.Scouts(strcmp({sAtlas.Scouts.Label}, ROI_name));
