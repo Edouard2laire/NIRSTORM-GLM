@@ -72,6 +72,7 @@ function stats_fe = nst_glm_fixed_effect(stats, models, nuisance_patterns)
     % --- Inverse-covariance weighted combination, per channel ---
     beta_fe = zeros(nReg, nChan);
     covb_fe = nan(nReg, nReg, nChan);
+    nEff = zeros(nReg, nChan);
 
     for iChan = 1:nChan
         Info = zeros(nReg);
@@ -91,6 +92,7 @@ function stats_fe = nst_glm_fixed_effect(stats, models, nuisance_patterns)
             P = pinv(C);
             Info(iu, iu) = Info(iu, iu) + P;
             Wb(iu)       = Wb(iu) + P * b;
+            nEff(iu, iChan) = nEff(iu, iChan) + models(iRun).n_event(ii)';
         end
 
         ok = diag(Info) > 0;
@@ -121,4 +123,6 @@ function stats_fe = nst_glm_fixed_effect(stats, models, nuisance_patterns)
     stats_fe.tstat    = tstat;
     stats_fe.pval     = pval;
     stats_fe.reg_names = dataNames;
+    stats_fe.nEff = nEff;
+
 end

@@ -1,6 +1,7 @@
 function sHRF = nst_load_hrf_lib(name, dt)
 
-    hrf_file = fullfile(fileparts(which("nst_create_model.m")), '..', 'lib', [name, '.csv']);
+    PlugDesc = bst_plugin('GetInstalled', 'nirstorm-glm');
+    hrf_file = fullfile(PlugDesc.Path, PlugDesc.SubFolder, 'lib', [name, '.csv']);
     if ~file_exist(hrf_file)
         error('Unable to find the HrF library')
     end
