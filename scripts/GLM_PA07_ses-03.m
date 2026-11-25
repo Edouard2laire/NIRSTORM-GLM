@@ -59,7 +59,7 @@ for iData = 1:length(sFiles)
     dataAll = [ data, dataAll];
 
     % save splitted data
-    models(iData) = model;
+    models = [models, model];
     datas{iData} =  data;
 
 end
@@ -111,7 +111,7 @@ for iEvent = 1:length(eventNames)
     hold on;
     shadedErrorBar(sHRF.time, mean(y_HbO,1), std(y_HbO), 'lineProps', 'r-');
     shadedErrorBar(sHRF.time, mean(y_HbR,1), std(y_HbR), 'lineProps', 'b-');
-    title(eventNames(iEvent))
+    title(strrep(eventNames(iEvent), '^', ' '))
     yline(0, '--')
 end
 
@@ -128,3 +128,26 @@ end
 
 stats_HbO_all = nst_glm_fixed_effect(stats_HbO, models);
 stats_HbR_all = nst_glm_fixed_effect(stats_HbR, models);
+
+
+draws_HbO = mvnrnd(stats_HbO_all.beta, stats_HbO_all.covb, 2000); 
+draws_HbR = mvnrnd(stats_HbR_all.beta, stats_HbR_all.covb, 2000); 
+
+
+for iEvent = 1:length(eventNames)
+    iReg = contains(stats_HbO_all.reg_names, eventNames(iEvent));
+
+    if ~any(iReg)
+        continue;
+    end
+
+    y_HbO = draws_HbO(:, iReg)*(sHRF.basis_functions)'; 
+    y_HbR = draws_HbR(:, iReg)*(sHRF.basis_functions)'; 
+
+    figure;
+    hold on;
+    shadedErrorBar(sHRF.time, mean(y_HbO,1), std(y_HbO), 'lineProps', 'r-');
+    shadedErrorBar(sHRF.time, mean(y_HbR,1), std(y_HbR), 'lineProps', 'b-');
+    title(eventNames(iEvent))
+    yline(0, '--')
+end
