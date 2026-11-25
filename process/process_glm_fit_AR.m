@@ -85,7 +85,7 @@ function OutputFiles = Run(sProcess, sInputs)
     iStudy = db_add_condition(subjectName, sProcess.options.out_name.Value);
     sStudy = bst_get('Study', iStudy);
     
-    bst_progress('start', 'NST-GLM', 'Fitting the model', 0, length(sInputs)*length(sRois)*length(selected_event_names));
+    bst_progress('start', 'NST-GLM', 'Fitting the model', 0, length(sInputs)*length(sRois));
     for iChromophore = 1:length(data_types)
 
         data_type = data_types{iChromophore};
