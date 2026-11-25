@@ -77,14 +77,15 @@ function OutputFiles = Run(sProcess, sInputs)
     atlas_name = sProcess.options.scouts.Value{1}; ROI_name = sProcess.options.scouts.Value{2};
 
     sAtlas = sCortex.Atlas(strcmp({sCortex.Atlas.Name}, atlas_name));
-    sRoi = sAtlas.Scouts(strcmp({sAtlas.Scouts.Label}, ROI_name));
+    sRois = cellfun(@(x)sAtlas.Scouts(strcmp({sAtlas.Scouts.Label}, x)), ROI_name);
 
     sFiles = {sInputs.FileName};
     data_types = {'HbO','HbR'};
 
     iStudy = db_add_condition(subjectName, sProcess.options.out_name.Value);
     sStudy = bst_get('Study', iStudy);
-
+    
+    bst_progress('start', 'NST-GLM', 'Fitting the model', 0, length(sInputs)*length(sRois)*length(selected_event_names));
     for iChromophore = 1:length(data_types)
 
         data_type = data_types{iChromophore};
@@ -114,22 +115,34 @@ function OutputFiles = Run(sProcess, sInputs)
         sDataOut_beta.DisplayUnits = 'mumol.l-1';
         sDataOut_beta.SurfaceFile = sSubject.Surface(sSubject.iCortex).FileName;
 
+        for iRoi = 1:length(sRois)
 
-        stats = [];
-        for iData = 1:length(sDataAll)
-            data = getDataRoi(sDataAll(iData), sRoi);
-            stats = [stats,nirs.math.ar_irls(data', models(iData).X, 10, 4.685, 0, 0, 1 )];
-        end
+            stats = [];
+            sRoi  = sRois(iRoi);
 
-        stats_fixed = nst_glm_fixed_effect(stats, models);
-        stats_fixed.ROI = sRoi;
-        HRFs = compute_HRF(stats_fixed, sHRF, selected_event_names);
+            for iData = 1:length(sDataAll)
+                data = getDataRoi(sDataAll(iData), sRoi);
+                stats = [stats,nirs.math.ar_irls(data', models(iData).X, 10, 4.685, 0, 0, 1 )];
 
-        for iEvent = 1:length(selected_event_names)
-            sDataOut(iEvent).ImageGridAmp(sRoi.Vertices, :) = repmat(mean(HRFs(iEvent).draw), length(sRoi.Vertices), 1);
-            sDataOut(iEvent).Std(sRoi.Vertices, :) = repmat(std(HRFs(iEvent).draw), length(sRoi.Vertices), 1);
-            sDataOut(iEvent).Leff  =  HRFs(iEvent).nEff;
-            sDataOut(iEvent).nAvg   =  HRFs(iEvent).nEff;
+                bst_progress('inc', 1);
+            end
+    
+            stats_fixed = nst_glm_fixed_effect(stats, models);
+            stats_fixed.ROI = sRoi;
+            HRFs = compute_HRF(stats_fixed, sHRF, selected_event_names);
+    
+            for iEvent = 1:length(selected_event_names)
+                sDataOut(iEvent).ImageGridAmp(sRoi.Vertices, :) = repmat(mean(HRFs(iEvent).draw), length(sRoi.Vertices), 1);
+                sDataOut(iEvent).Std(sRoi.Vertices, :) = repmat(std(HRFs(iEvent).draw), length(sRoi.Vertices), 1);
+                sDataOut(iEvent).Leff  =  HRFs(iEvent).nEff;
+                sDataOut(iEvent).nAvg   =  HRFs(iEvent).nEff;
+            end
+
+            sDataOut_beta.ImageGridAmp(sRoi.Vertices, :) = repmat(stats_fixed.beta', length(sRoi.Vertices), 1);
+            sDataOut_beta.Std(sRoi.Vertices, :, :) = repmat(reshape(stats_fixed.covb, [1, size(stats_fixed.covb)]), length(sRoi.Vertices), 1, 1);
+            sDataOut_beta.stats = [sDataOut_beta.stats, stats_fixed];
+            sDataOut_beta.Leff  =  stats_fixed.nEff;
+            sDataOut_beta.nAvg   =  stats_fixed.nEff;
         end
 
         % Generate a new file name in the same folder
@@ -141,12 +154,6 @@ function OutputFiles = Run(sProcess, sInputs)
             OutputFiles{end+1} = OutputFile;
         end
 
-        sDataOut_beta.ImageGridAmp(sRoi.Vertices, :) = repmat(stats_fixed.beta', length(sRoi.Vertices), 1);
-        sDataOut_beta.Std(sRoi.Vertices, :, :) = repmat(reshape(stats_fixed.covb, [1, size(stats_fixed.covb)]), length(sRoi.Vertices), 1, 1);
-        sDataOut_beta.stats = [sDataOut_beta.stats, stats_fixed];
-        sDataOut_beta.Leff  =  stats_fixed.nEff;
-        sDataOut_beta.nAvg   =  stats_fixed.nEff;
-        
         OutputFile = bst_process('GetNewFilename', bst_fileparts(sStudy.FileName), sprintf('results_stats_%s_%s', nst_protect_fn_str(selected_event_names{iEvent}), data_type));
         bst_save(OutputFile, sDataOut_beta, 'v7');
         % Register in database
@@ -154,7 +161,6 @@ function OutputFiles = Run(sProcess, sInputs)
         OutputFiles{end+1} = OutputFile;
 
     end
-
 end
 
 function [sHRF, models, sDataAll] = initialize_models(sFiles, eventNames)
